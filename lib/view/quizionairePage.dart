@@ -15,6 +15,7 @@ class _QuestionPageState extends State<QuestionPage> {
   int numOfQuestion;
   int currNumOfQuestion = 0;
   String question = "";
+  String ans = "";
   String submitButton = "Next Question ->";
   List<RadioModel> ansButton = new List<RadioModel>();
 
@@ -29,7 +30,9 @@ class _QuestionPageState extends State<QuestionPage> {
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
-      onWillPop: (){DialogNotToGoBack();},
+      onWillPop: (){
+        return dialogNotToGoBack();
+        },
         child: Scaffold(
             body: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -62,11 +65,12 @@ class _QuestionPageState extends State<QuestionPage> {
                                   itemCount: ansButton.length,
                                   itemBuilder: (BuildContext context, int index) {
                                     return new InkWell(
-                                      splashColor: Colors.blueAccent,
+                                      splashColor: Colors.green[200],
                                       onTap: () {
                                         setState(() {
                                           ansButton.forEach((element) => element.isSelected = false);
                                           ansButton[index].isSelected = true;
+                                          ans = ansButton[index].buttonText;
                                         });
                                       },
                                       child: new RadioItem(ansButton[index]),
@@ -91,8 +95,9 @@ class _QuestionPageState extends State<QuestionPage> {
                                   ),
                                 ),
                                 onPressed: (){
+                                  print(ans);
+                                  print(snapshot.data.data[currNumOfQuestion].id);
                                   currNumOfQuestion = currNumOfQuestion+1; //increasing number of question
-
                                   if(currNumOfQuestion == numOfQuestion){ //when all question printing complete
                                     Navigator.of(context).pushReplacement(MaterialPageRoute(
                                         builder: (context) => CaptureImagePage(marks: 10)
@@ -102,11 +107,18 @@ class _QuestionPageState extends State<QuestionPage> {
                                   getNextQuestion(snapshot.data.data[currNumOfQuestion].question,
                                       snapshot.data.data[currNumOfQuestion].id);
 
-                                  if((currNumOfQuestion)==(numOfQuestion-1)) { //for last question showing submit button.
+                                  //for last question showing submit button.
+                                  if((currNumOfQuestion)==(numOfQuestion-1)) {
                                     setState(() {
                                       submitButton = "Submit";
                                     });
                                   }
+
+                                  //make all the button unpressed
+                                  setState(() {
+                                          ansButton.forEach((element) => element.isSelected = false);
+                                  });
+
                                 },
                               ),
                             ),
@@ -124,7 +136,7 @@ class _QuestionPageState extends State<QuestionPage> {
     );
   }
 
-  void DialogNotToGoBack(){
+  dialogNotToGoBack(){
     showDialog(
         context: context,
         child: new AlertDialog(
@@ -133,7 +145,7 @@ class _QuestionPageState extends State<QuestionPage> {
           actions: <Widget>[
             new IconButton(icon: new Icon(Icons.close), onPressed: (){Navigator.pop(context);})
           ],
-        )
+        ),
     );
   }
 

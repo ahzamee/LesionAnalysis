@@ -1,13 +1,14 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:progress_dialog/progress_dialog.dart';
-
+import 'package:http/http.dart' as http;
 import 'analysisResult.dart';
 
 class CaptureImagePage extends StatefulWidget {
-  int marks;
+  final int marks;
 
   CaptureImagePage({Key key, @required this.marks}) : super(key: key);
 
@@ -17,11 +18,11 @@ class CaptureImagePage extends StatefulWidget {
 
 class CaptureImagePageState extends State<CaptureImagePage> {
   File _image;
-  String _retrieveDataError;
+  //String _retrieveDataError;
   ProgressDialog progressDialog;
 
   Future getImage() async {
-    var image = await ImagePicker.pickImage(source: ImageSource.camera);
+    var image = await ImagePicker.pickImage(source: ImageSource.camera,maxHeight: 224.0,maxWidth: 224.0);
 
     setState(() {
       _image = image;
@@ -29,7 +30,7 @@ class CaptureImagePageState extends State<CaptureImagePage> {
   }
 
   String message;
-  String image;
+  var imageResult;
 
   @override
   void initState() {
@@ -59,7 +60,7 @@ class CaptureImagePageState extends State<CaptureImagePage> {
               child: Container(
                   child: Column(children: <Widget>[
                 choiceButton(),
-                ShowImage(),
+                showImage(),
               ])),
             ),
           ),
@@ -121,7 +122,7 @@ class CaptureImagePageState extends State<CaptureImagePage> {
     );
   }
 
-  Widget ShowImage() {
+  Widget showImage() {
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 0, 20, 0),
       child: Material(
@@ -140,6 +141,9 @@ class CaptureImagePageState extends State<CaptureImagePage> {
                     );
                   case ConnectionState.done:
                     if (_image != null) {
+                      List<int> imageBytes = _image.readAsBytesSync();
+                      String base64Image = base64Encode(imageBytes);
+                      result(base64Image);
                       return Image.file(_image);
                     }
                     return Text(
@@ -168,8 +172,36 @@ class CaptureImagePageState extends State<CaptureImagePage> {
     );
   }
 
+//getting csrf token for server request
+  Future<String> getCsrfToken() async {
+    var response = await http.get(Uri.encodeFull('http://mdhassan.herokuapp.com/imagepredict'));
+    var csrfToken = response.headers.remove('set-cookie').substring(10, 74); //csrf 64 chars
+    return csrfToken;
+  }
+
+  result(String image) async{
+    //final csrf = await getCsrfToken();
+    var response = await http.post('http://mdhassan.herokuapp.com/imagepredict',
+    body:{
+      'image' : image
+    });
+    imageResult = jsonDecode(response.body);
+  }
+
+  dialogNotToGoBack(){
+    showDialog(
+      context: context,
+      child: new AlertDialog(
+        title: new Text("ERROR"),
+        content: new Text("Please try again."),
+        actions: <Widget>[
+          new IconButton(icon: new Icon(Icons.close), onPressed: (){Navigator.pop(context);})
+        ],
+      ),
+    );
+  }
+
   void _onLoading() {
-    final themeColor = new Color(0xfff5a623);
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -188,11 +220,16 @@ class CaptureImagePageState extends State<CaptureImagePage> {
             ));
       },
     );
-    new Future.delayed(new Duration(seconds: 3), () {
-      Navigator.pop(context); //pop dialog
-      Navigator.of(context).pushReplacement(MaterialPageRoute(
-          builder: (context) => AnalysisResult()
-      ));
+    new Future.delayed(new Duration(seconds: 5), () {
+      if(imageResult!=null){
+        Navigator.pop(context); //pop dialog
+        Navigator.of(context).push(MaterialPageRoute(
+            builder: (context) => AnalysisResult(imageResult: imageResult)
+        ));
+      }else{
+        Navigator.pop(context);
+        dialogNotToGoBack();
+      }
     });
   }
 
@@ -206,7 +243,7 @@ class CaptureImagePageState extends State<CaptureImagePage> {
         _image = response.file;
       });
     } else {
-      _retrieveDataError = response.exception.code;
+      //_retrieveDataError = response.exception.code;
     }
   }
 }
