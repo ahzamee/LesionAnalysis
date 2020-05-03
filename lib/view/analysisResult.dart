@@ -81,9 +81,9 @@ class _AnalysisResultState extends State<AnalysisResult> {
                   ),
                 ),
                 onPressed: (){
-                  /*Navigator.of(context).pushReplacement(MaterialPageRoute(
+                  Navigator.of(context).pushReplacement(MaterialPageRoute(
                       builder: (context) => HomePage()
-                  ));*/
+                  ));
                 },
               ),
             ),
